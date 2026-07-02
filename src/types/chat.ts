@@ -8,6 +8,8 @@ export interface MediaCard {
   description: string
   linkLabel: string
   linkUrl: string
+  mediaType?: 'image' | 'video'
+  videoUrl?: string
 }
 
 export interface ChatMessage {

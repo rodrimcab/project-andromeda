@@ -20,7 +20,11 @@ export interface LlmChatMessage {
 function formatCardAsText(card: MediaCard): string {
   const desc = card.description ? `\nDescription: ${card.description}` : ''
   const link = card.linkUrl ? `\nLink: ${card.linkLabel} (${card.linkUrl})` : ''
-  return `Card: ${card.title}${desc}${link}\nImage: ${card.imageUrl}`
+  const media =
+    card.mediaType === 'video'
+      ? `\nMedia: video${card.videoUrl ? ` (${card.videoUrl})` : ''}`
+      : `\nImage: ${card.imageUrl}`
+  return `Card: ${card.title}${desc}${link}${media}`
 }
 
 function chatMessageToParts(message: ChatMessage): ConversationPart[] {

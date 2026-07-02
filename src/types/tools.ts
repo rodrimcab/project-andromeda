@@ -18,6 +18,7 @@ export interface ApodToolResult {
   mediaType: 'image' | 'video'
   hdImageUrl?: string
   sourceUrl?: string
+  copyright?: string
 }
 
 export interface SaveMissionToolResult {
