@@ -9,6 +9,7 @@ import Sidebar from '@/components/layout/Sidebar.vue'
 import { useChatSubmit } from '@/composables/useChatSubmit'
 import { useMissionSave } from '@/composables/useMissionSave'
 import { useVoiceInput } from '@/composables/useVoiceInput'
+import type { MicLanguage } from '@/composables/useMicLanguage'
 import { useAppStore } from '@/store/appStore'
 import { useChatStore } from '@/store/chatStore'
 import { useMissionStore } from '@/store/missionStore'
@@ -22,17 +23,15 @@ const chatStore = useChatStore()
 const missionStore = useMissionStore()
 const voiceInput = useVoiceInput()
 const missionSave = useMissionSave()
-const { canSubmit, submitMessage } = useChatSubmit()
+const { canSubmit, submitMessage, cancelSpeaking } = useChatSubmit()
 
 onMounted(() => {
   chatStore.hydrate()
   missionStore.hydrate()
 })
 
-function handleNavigate(view: 'chat' | 'missions') {
-  if (view === 'missions') {
-    sidebarOpen.value = false
-  }
+function handleNavigate() {
+  sidebarOpen.value = false
 }
 
 async function handleSaveCard(card: Parameters<typeof missionSave.saveCard>[0]) {
@@ -41,6 +40,19 @@ async function handleSaveCard(card: Parameters<typeof missionSave.saveCard>[0]) 
 
 async function handleSubmit(text: string) {
   await submitMessage(text)
+}
+
+function handleClearChat() {
+  if (chatStore.voiceState === 'listening') {
+    voiceInput.abortListening()
+  }
+
+  cancelSpeaking()
+  chatStore.clearChat()
+}
+
+function handleMicLanguage(language: MicLanguage) {
+  voiceInput.setMicLanguage(language)
 }
 </script>
 
@@ -54,7 +66,7 @@ async function handleSubmit(text: string) {
     @close-panel="panelOpen = false"
   >
     <template #sidebar>
-      <Sidebar @navigate="handleNavigate" />
+      <Sidebar @navigate="handleNavigate" @close="sidebarOpen = false" />
     </template>
 
     <template #chat>
@@ -66,7 +78,11 @@ async function handleSubmit(text: string) {
         :voice-error="voiceInput.errorMessage.value"
         :voice-disabled="!voiceInput.isSupported.value"
         :can-submit="canSubmit"
+        :mic-language="voiceInput.micLanguage.value"
         @voice-toggle="voiceInput.toggleListening()"
+        @cancel-speaking="cancelSpeaking()"
+        @clear-chat="handleClearChat"
+        @set-mic-language="handleMicLanguage"
         @submit="handleSubmit"
         @save-card="handleSaveCard"
       >
@@ -79,7 +95,7 @@ async function handleSubmit(text: string) {
     </template>
 
     <template #panel>
-      <RightPanel />
+      <RightPanel @close="panelOpen = false" />
     </template>
   </AppLayout>
 </template>

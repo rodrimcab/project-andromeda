@@ -9,16 +9,30 @@ import { useMissionStore } from '@/store/missionStore'
 import type { AiError, AssistantResponse } from '@/types/ai'
 import type { ChatMessage } from '@/types/chat'
 import { detectSaveIntent } from '@/utils/saveIntent'
+import { detectTextLanguage, getSpeechSynthesisLangForText } from '@/utils/detectLanguage'
 
 const USER_FACING_ERRORS: Record<string, string> = {
   missing_api_key:
     'Mission Control is offline — the Gemini API key is not configured. Add VITE_GEMINI_API_KEY to your .env file and restart the dev server.',
-  quota_exceeded:
-    'Mission Control is at capacity right now — Gemini free-tier quota reached. Wait a minute and try again, or switch to gemini-2.0-flash in your .env.',
   api_error:
     'I lost contact with Mission Control. Please check your connection and try again.',
   empty_response: 'I received an empty signal from Mission Control. Please try again.',
   unknown: 'Something went wrong on my end. Please try again.',
+}
+
+const QUOTA_EXCEEDED_MESSAGES = {
+  en: 'Mission Control is temporarily unavailable due to high demand. Please wait a moment and try again. Your mission is still on course. 🚀',
+  es: 'Mission Control está experimentando una alta demanda en este momento. Espera unos instantes e inténtalo de nuevo. Tu misión sigue en curso. 🚀',
+} as const
+
+function getUserFacingError(code: string, lastUserMessage: string): string {
+  if (code === 'quota_exceeded') {
+    return detectTextLanguage(lastUserMessage) === 'es'
+      ? QUOTA_EXCEEDED_MESSAGES.es
+      : QUOTA_EXCEEDED_MESSAGES.en
+  }
+
+  return USER_FACING_ERRORS[code] ?? USER_FACING_ERRORS.unknown ?? 'Something went wrong.'
 }
 
 function toAiError(error: unknown): AiError {
@@ -107,6 +121,7 @@ export function useAssistant() {
 
     const lastUserMessage = getLastUserMessage(chatStore.messages)
     const saveIntent = detectSaveIntent(lastUserMessage)
+    const speechLang = getSpeechSynthesisLangForText(lastUserMessage)
 
     let responseText = ''
 
@@ -122,7 +137,7 @@ export function useAssistant() {
         if (fallback.handled) {
           chatStore.addAssistantSuccessMessage(fallback.message)
           responseText = fallback.message
-          await voiceOutput.speak(responseText)
+          await voiceOutput.speak(responseText, speechLang)
           return
         }
       }
@@ -137,12 +152,15 @@ export function useAssistant() {
         console.error('[Andromeda] Gemini request failed:', aiError.message)
       }
 
-      responseText =
-        USER_FACING_ERRORS[aiError.code] ?? USER_FACING_ERRORS.unknown ?? 'Something went wrong.'
+      responseText = getUserFacingError(aiError.code, lastUserMessage)
       chatStore.addAssistantTextMessage(responseText)
     }
 
-    await voiceOutput.speak(responseText)
+    await voiceOutput.speak(responseText, speechLang)
+  }
+
+  function cancelSpeaking() {
+    voiceOutput.cancel()
   }
 
   return {
@@ -150,5 +168,6 @@ export function useAssistant() {
     isGenerating,
     clearError,
     generateResponse,
+    cancelSpeaking,
   }
 }

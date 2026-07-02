@@ -10,6 +10,12 @@ import type { LlmChatMessage } from '@/models/conversation/conversation'
 import { ANDROMEDA_TOOLS } from '@/tools/definitions'
 import { executeToolCall, type ToolExecutionContext } from '@/tools/executor'
 import type { AiErrorCode, AssistantEffect, AssistantResponse } from '@/types/ai'
+import {
+  detectTextLanguage,
+  getLanguageReplyHint,
+  getResponseLanguageLabel,
+  type DetectedLanguageCode,
+} from '@/utils/detectLanguage'
 
 const MAX_TOOL_ROUNDS = 5
 
@@ -37,18 +43,42 @@ function getClient(): GoogleGenerativeAI {
   return client
 }
 
-function toGeminiContents(messages: LlmChatMessage[]): Content[] {
-  return messages.map((message) => ({
+function toGeminiContents(
+  messages: LlmChatMessage[],
+  responseLanguage?: DetectedLanguageCode,
+): Content[] {
+  const contents = messages.map((message) => ({
     role: message.role,
     parts: [{ text: message.content }],
   }))
+
+  if (!responseLanguage) return contents
+
+  const last = contents.at(-1)
+  const lastPart = last?.parts?.[0]
+  if (last?.role !== 'user' || !lastPart || !('text' in lastPart)) return contents
+
+  const hint = getLanguageReplyHint(responseLanguage)
+  contents[contents.length - 1] = {
+    role: 'user',
+    parts: [{ text: `${lastPart.text}\n\n${hint}` }],
+  }
+
+  return contents
 }
 
-function getGenerativeModel() {
+function getGenerativeModel(responseLanguage?: DetectedLanguageCode) {
   const genAI = getClient()
+
+  let systemInstruction = ANDROMEDA_SYSTEM_PROMPT
+  if (responseLanguage) {
+    const languageLabel = getResponseLanguageLabel(responseLanguage)
+    systemInstruction += `\n\nCRITICAL LANGUAGE RULE: The user's latest message is in ${languageLabel}. You MUST write your entire response in ${languageLabel} only — including tool summaries and follow-ups. Ignore the language of earlier messages in this conversation.`
+  }
+
   return genAI.getGenerativeModel({
     model: env.geminiModel,
-    systemInstruction: ANDROMEDA_SYSTEM_PROMPT,
+    systemInstruction,
     tools: ANDROMEDA_TOOLS,
   })
 }
@@ -78,8 +108,9 @@ export async function sendChatMessage(
     throw new GeminiServiceError('The latest message must be from the user.', 'api_error')
   }
 
-  const model = getGenerativeModel()
-  const contents: Content[] = toGeminiContents(messages)
+  const responseLanguage = detectTextLanguage(lastMessage.content)
+  const model = getGenerativeModel(responseLanguage)
+  const contents: Content[] = toGeminiContents(messages, responseLanguage)
   const effects: AssistantEffect[] = []
 
   try {

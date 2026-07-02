@@ -79,7 +79,7 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}) {
     isSpeaking.value = false
   }
 
-  async function speak(text: string): Promise<void> {
+  async function speak(text: string, langOverride?: string): Promise<void> {
     const trimmed = text.trim()
     if (!trimmed) return
 
@@ -92,12 +92,13 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}) {
     cancel()
     error.value = null
 
+    const speechLang = langOverride ?? lang
     const voices = await waitForVoices()
-    const voice = pickSpeechSynthesisVoice(voices, lang)
+    const voice = pickSpeechSynthesisVoice(voices, speechLang)
 
     return new Promise((resolve) => {
       const instance = new SpeechSynthesisUtterance(trimmed)
-      instance.lang = lang
+      instance.lang = speechLang
       instance.rate = rate
       instance.pitch = pitch
       instance.volume = volume

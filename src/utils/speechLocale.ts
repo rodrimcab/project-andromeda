@@ -1,23 +1,45 @@
+import {
+  getSpeechRecognitionLangForText,
+  getSpeechSynthesisLangForText,
+} from '@/utils/detectLanguage'
+
 const SPANISH_REGIONAL_LANGS = new Set(['es-MX', 'es-AR', 'es-CO', 'es-CL', 'es-PE', 'es-VE'])
 
-function getPreferredSpeechLang(): string {
-  return navigator.languages?.[0] ?? navigator.language ?? 'en-US'
-}
-
 export function getSpeechRecognitionLang(): string {
-  const preferred = getPreferredSpeechLang()
+  const languages =
+    typeof navigator !== 'undefined'
+      ? [...(navigator.languages ?? []), navigator.language].filter(Boolean)
+      : ['en-US']
 
-  if (!preferred.startsWith('es')) return 'en-US'
+  for (const preferred of languages) {
+    if (preferred.startsWith('en')) return 'en-US'
 
-  if (SPANISH_REGIONAL_LANGS.has(preferred)) return preferred
-  if (preferred.startsWith('es-MX')) return 'es-MX'
-  if (preferred.startsWith('es-ES')) return 'es-ES'
+    if (preferred.startsWith('es')) {
+      if (SPANISH_REGIONAL_LANGS.has(preferred)) return preferred
+      if (preferred.startsWith('es-MX')) return 'es-MX'
+      if (preferred.startsWith('es-US')) return 'es-US'
+      if (preferred.startsWith('es-ES')) return 'es-ES'
+      return 'es-ES'
+    }
+  }
 
-  return 'es-ES'
+  return 'en-US'
 }
 
+/** @deprecated Use getSpeechSynthesisLangForText with the text to speak. */
 export function getSpeechSynthesisLang(): string {
   return getSpeechRecognitionLang()
+}
+
+export { getSpeechRecognitionLangForText, getSpeechSynthesisLangForText }
+
+function voiceMatchesLang(voice: SpeechSynthesisVoice, lang: string): boolean {
+  const langPrefix = lang.split('-')[0] ?? lang
+  return voice.lang === lang || voice.lang.startsWith(`${langPrefix}-`) || voice.lang === langPrefix
+}
+
+function isGoogleVoice(voice: SpeechSynthesisVoice): boolean {
+  return /google/i.test(voice.name)
 }
 
 export function pickSpeechSynthesisVoice(
@@ -26,14 +48,19 @@ export function pickSpeechSynthesisVoice(
 ): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null
 
-  const langPrefix = lang.split('-')[0] ?? lang
+  const matching = voices.filter((voice) => voiceMatchesLang(voice, lang))
+  if (matching.length === 0) {
+    const defaultVoice = voices.find((voice) => voice.default)
+    return defaultVoice ?? voices[0] ?? null
+  }
 
-  const exactMatch = voices.find((voice) => voice.lang === lang)
-  if (exactMatch) return exactMatch
+  const exactMatches = matching.filter((voice) => voice.lang === lang)
+  const googleExact = exactMatches.find(isGoogleVoice)
+  if (googleExact) return googleExact
+  if (exactMatches.length > 0) return exactMatches[0] ?? null
 
-  const prefixMatch = voices.find((voice) => voice.lang.startsWith(langPrefix))
-  if (prefixMatch) return prefixMatch
+  const googleMatch = matching.find(isGoogleVoice)
+  if (googleMatch) return googleMatch
 
-  const defaultVoice = voices.find((voice) => voice.default)
-  return defaultVoice ?? voices[0] ?? null
+  return matching[0] ?? null
 }

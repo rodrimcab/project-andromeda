@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
   Bookmark,
-  Earth,
   Image,
+  Moon,
   Orbit,
   Rocket,
   Telescope,
@@ -15,26 +15,32 @@ import { suggestions } from '@/data/mockData'
 import { useAppStore } from '@/store/appStore'
 import { MISSION_LOG_PREVIEW_LIMIT, useMissionStore } from '@/store/missionStore'
 
+const emit = defineEmits<{
+  close: []
+}>()
+
 const appStore = useAppStore()
 const missionStore = useMissionStore()
 const { canSubmit, submitMessage } = useChatSubmit()
 
 missionStore.hydrate()
 
-const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
+const suggestionIcons = [Rocket, Telescope, Image, Orbit, Moon]
 
 function openMissionArchive() {
   appStore.setActiveView('missions')
+  emit('close')
 }
 
 async function handleSuggestion(label: string) {
   appStore.setActiveView('chat')
+  emit('close')
   await submitMessage(label)
 }
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-y-auto p-4 lg:p-6">
+  <div class="h-full overflow-y-auto p-4 lg:p-6">
     <!-- Try asking -->
     <section class="mb-8">
       <h2 class="mb-4 text-sm font-semibold text-gray-300">Try asking</h2>

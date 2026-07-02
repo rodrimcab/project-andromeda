@@ -10,6 +10,6 @@ export const suggestions: Suggestion[] = [
   { id: '2', label: "Show me today's NASA picture" },
   { id: '3', label: 'Show me a random NASA image' },
   { id: '4', label: 'Explain black holes' },
-  { id: '5', label: "What's the weather on Earth?" },
+  { id: '5', label: 'How do stars form?' },
 ]
 

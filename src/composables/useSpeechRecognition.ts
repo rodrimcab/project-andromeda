@@ -10,10 +10,13 @@ export interface UseSpeechRecognitionOptions {
   lang?: string
   continuous?: boolean
   interimResults?: boolean
+  maxListenMs?: number
   onResult?: (result: SpeechRecognitionResult) => void
   onError?: (code: SpeechRecognitionErrorCode, message: string) => void
   onEnd?: () => void
 }
+
+const DEFAULT_MAX_LISTEN_MS = 15_000
 
 function getSpeechRecognitionConstructor(): typeof SpeechRecognition | null {
   if (typeof window === 'undefined') return null
@@ -38,28 +41,12 @@ function mapRecognitionError(error: string): SpeechRecognitionErrorCode {
   }
 }
 
-function collectTranscript(results: SpeechRecognitionResultList): {
-  transcript: string
-  isFinal: boolean
-} {
-  let transcript = ''
-  let isFinal = false
-
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i]
-    if (!result) continue
-    transcript += result[0]?.transcript ?? ''
-    if (result.isFinal) isFinal = true
-  }
-
-  return { transcript: transcript.trim(), isFinal }
-}
-
 export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
   const {
     lang = 'en-US',
     continuous = false,
     interimResults = true,
+    maxListenMs = DEFAULT_MAX_LISTEN_MS,
     onResult,
     onError,
     onEnd,
@@ -76,40 +63,131 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
   const recognition = shallowRef<SpeechRecognition | null>(null)
 
-  function createRecognition(): SpeechRecognition | null {
+  let sessionId = 0
+  let sessionFinalTranscript = ''
+  let listenTimeoutId: number | null = null
+  let endedWithError = false
+
+  function clearListenTimeout() {
+    if (listenTimeoutId !== null) {
+      window.clearTimeout(listenTimeoutId)
+      listenTimeoutId = null
+    }
+  }
+
+  function scheduleListenTimeout(instance: SpeechRecognition, activeSessionId: number) {
+    clearListenTimeout()
+    listenTimeoutId = window.setTimeout(() => {
+      if (activeSessionId !== sessionId || !isListening.value) return
+      try {
+        instance.stop()
+      } catch {
+        finishSession(activeSessionId)
+      }
+    }, maxListenMs)
+  }
+
+  function finishSession(activeSessionId: number) {
+    if (activeSessionId !== sessionId) return
+    clearListenTimeout()
+    isListening.value = false
+    recognition.value = null
+  }
+
+  function detachActiveRecognition() {
+    clearListenTimeout()
+    const active = recognition.value
+    if (!active) return
+
+    active.onend = null
+    active.onresult = null
+    active.onerror = null
+    active.onstart = null
+
+    try {
+      active.abort()
+    } catch {
+      // Recognition may already be inactive.
+    }
+
+    recognition.value = null
+    isListening.value = false
+  }
+
+  function createRecognition(langOverride: string | undefined, activeSessionId: number): SpeechRecognition | null {
     if (!SpeechRecognitionCtor) return null
 
     const instance = new SpeechRecognitionCtor()
-    instance.lang = lang
+    instance.lang = langOverride ?? lang
     instance.continuous = continuous
     instance.interimResults = interimResults
+    instance.maxAlternatives = 1
 
     instance.onstart = () => {
+      if (activeSessionId !== sessionId) return
       isListening.value = true
       error.value = null
+      scheduleListenTimeout(instance, activeSessionId)
     }
 
     instance.onresult = (event: SpeechRecognitionEvent) => {
-      const { transcript: text, isFinal } = collectTranscript(event.results)
+      if (activeSessionId !== sessionId) return
 
-      if (isFinal) {
-        transcript.value = text
-        interimTranscript.value = ''
-      } else {
-        interimTranscript.value = text
+      let interim = ''
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (!result) continue
+
+        const chunk = result[0]?.transcript ?? ''
+        if (result.isFinal) {
+          sessionFinalTranscript += chunk
+        } else {
+          interim += chunk
+        }
       }
 
-      onResult?.({ transcript: text, isFinal })
+      transcript.value = sessionFinalTranscript.trim()
+      interimTranscript.value = interim.trim()
+
+      const combined = `${sessionFinalTranscript}${interim}`.trim()
+      const lastResult = event.results[event.results.length - 1]
+      const isFinal = lastResult?.isFinal ?? false
+
+      onResult?.({ transcript: combined, isFinal })
+
+      if (isFinal && combined) {
+        window.setTimeout(() => {
+          if (activeSessionId !== sessionId || recognition.value !== instance) return
+          try {
+            instance.stop()
+          } catch {
+            // stop() can throw if recognition already ended.
+          }
+        }, 80)
+      }
     }
 
     instance.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (activeSessionId !== sessionId) return
+
+      endedWithError = true
       const code = mapRecognitionError(event.error)
       error.value = code
+      finishSession(activeSessionId)
       onError?.(code, event.message)
     }
 
     instance.onend = () => {
-      isListening.value = false
+      if (activeSessionId !== sessionId) return
+
+      finishSession(activeSessionId)
+
+      if (endedWithError) {
+        endedWithError = false
+        return
+      }
+
       onEnd?.()
     }
 
@@ -136,23 +214,26 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }
 
   function reset() {
+    sessionFinalTranscript = ''
     transcript.value = ''
     interimTranscript.value = ''
     error.value = null
   }
 
-  function start() {
+  function start(langOverride?: string) {
     if (!SpeechRecognitionCtor) {
       error.value = 'not-supported'
       onError?.('not-supported', 'Speech recognition is not supported in this browser.')
       return
     }
 
-    if (isListening.value) return
-
+    detachActiveRecognition()
+    sessionId += 1
+    const activeSessionId = sessionId
+    endedWithError = false
     reset()
 
-    const instance = createRecognition()
+    const instance = createRecognition(langOverride, activeSessionId)
     if (!instance) return
 
     recognition.value = instance
@@ -160,6 +241,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     try {
       instance.start()
     } catch (err) {
+      finishSession(activeSessionId)
       const message = err instanceof Error ? err.message : 'Failed to start speech recognition.'
       error.value = 'unknown'
       onError?.('unknown', message)
@@ -167,17 +249,23 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }
 
   function stop() {
-    recognition.value?.stop()
+    const active = recognition.value
+    if (!active) return
+
+    try {
+      active.stop()
+    } catch {
+      finishSession(sessionId)
+    }
   }
 
   function abort() {
-    recognition.value?.abort()
-    isListening.value = false
+    detachActiveRecognition()
+    sessionId += 1
   }
 
   onUnmounted(() => {
     abort()
-    recognition.value = null
   })
 
   return {

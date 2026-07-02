@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import galaxyImg from '@/assets/galaxy.png'
+
 defineProps<{
   sidebarOpen?: boolean
   panelOpen?: boolean
@@ -37,9 +39,14 @@ defineEmits<{
     <header
       class="relative z-20 flex items-center justify-between border-b border-white/10 bg-space-900/80 px-4 py-3 backdrop-blur-xl lg:hidden"
     >
-      <div class="flex items-center gap-2">
-        <span class="text-lg">🌌</span>
-        <span class="font-semibold text-gray-100">Project Andromeda</span>
+      <div class="flex min-w-0 items-center gap-2.5">
+        <img
+          :src="galaxyImg"
+          alt=""
+          class="h-8 w-8 shrink-0 object-contain"
+          aria-hidden="true"
+        />
+        <span class="truncate font-semibold text-gray-100">Project Andromeda</span>
       </div>
       <div class="flex gap-2">
         <button
@@ -60,7 +67,7 @@ defineEmits<{
         <button
           type="button"
           class="glass rounded-lg p-2 text-gray-400"
-          aria-label="Open panel"
+          aria-label="Open mission control panel"
           @click="$emit('toggle-panel')"
         >
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,8 +85,8 @@ defineEmits<{
     <div class="relative z-10 flex min-h-0 flex-1">
       <!-- Left sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-30 w-72 -translate-x-full overflow-hidden border-r border-white/10 bg-space-900/95 backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0 lg:overflow-visible lg:bg-transparent"
-        :class="{ 'translate-x-0': sidebarOpen }"
+        class="fixed inset-y-0 left-0 z-30 flex w-72 flex-col overflow-hidden border-r border-white/10 bg-space-900/95 backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-auto lg:overflow-visible lg:bg-transparent"
+        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
       >
         <slot name="sidebar" />
       </aside>
@@ -97,10 +104,35 @@ defineEmits<{
 
       <!-- Right panel -->
       <aside
-        class="fixed inset-y-0 right-0 z-30 w-80 translate-x-full border-l border-white/10 bg-space-900/95 backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:w-80 lg:translate-x-0 lg:bg-transparent xl:w-96"
-        :class="{ 'translate-x-0': panelOpen }"
+        class="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,20rem)] flex-col border-l border-white/10 bg-space-900/95 backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-80 lg:bg-transparent xl:w-96"
+        :class="panelOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'"
       >
-        <slot name="panel" />
+        <header
+          class="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 lg:hidden"
+        >
+          <div>
+            <h2 class="text-sm font-semibold text-gray-100">Mission Control</h2>
+            <p class="text-xs text-gray-500">Suggestions &amp; mission log</p>
+          </div>
+          <button
+            type="button"
+            class="glass rounded-lg p-2 text-gray-400"
+            aria-label="Close panel"
+            @click="$emit('close-panel')"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </header>
+        <div class="min-h-0 flex-1 overflow-hidden">
+          <slot name="panel" />
+        </div>
       </aside>
 
       <div

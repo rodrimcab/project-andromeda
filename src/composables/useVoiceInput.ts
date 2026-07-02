@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 
 import { useChatSubmit } from '@/composables/useChatSubmit'
+import { useMicLanguage } from '@/composables/useMicLanguage'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 import { useChatStore } from '@/store/chatStore'
 import type { SpeechRecognitionErrorCode } from '@/types/speech'
@@ -21,20 +22,24 @@ const ERROR_MESSAGES: Record<SpeechRecognitionErrorCode, string> = {
 export function useVoiceInput() {
   const chatStore = useChatStore()
   const { submitMessage } = useChatSubmit()
+  const { micLanguage, setMicLanguage, resolveRecognitionLang } = useMicLanguage()
   const errorMessage = ref<string | null>(null)
 
   const speech = useSpeechRecognition({
     lang: getSpeechRecognitionLang(),
     continuous: false,
     interimResults: true,
+    maxListenMs: 15_000,
     onEnd: handleRecognitionEnd,
     onError: handleRecognitionError,
   })
 
   const isListening = computed(() => chatStore.voiceState === 'listening')
-  const liveTranscript = computed(
-    () => speech.interimTranscript.value || speech.transcript.value,
-  )
+  const liveTranscript = computed(() => {
+    const finalText = speech.transcript.value
+    const interimText = speech.interimTranscript.value
+    return interimText ? `${finalText} ${interimText}`.trim() : finalText
+  })
 
   function clearError() {
     errorMessage.value = null
@@ -47,16 +52,24 @@ export function useVoiceInput() {
     chatStore.setVoiceState('idle')
   }
 
-  function handleRecognitionEnd() {
-    const text = (speech.transcript.value || speech.interimTranscript.value).trim()
+  async function handleRecognitionEnd() {
+    const text = liveTranscript.value.trim()
 
-    speech.reset()
-
-    if (text) {
-      void submitMessage(text)
+    if (!text) {
+      speech.reset()
+      chatStore.setVoiceState('idle')
       return
     }
 
+    speech.reset()
+    const sent = await submitMessage(text, { fromVoice: true })
+    if (!sent) {
+      chatStore.setVoiceState('idle')
+    }
+  }
+
+  function abortListening() {
+    speech.abort()
     chatStore.setVoiceState('idle')
   }
 
@@ -77,13 +90,16 @@ export function useVoiceInput() {
 
     await speech.checkMicrophonePermission()
     chatStore.setVoiceState('listening')
-    speech.start()
+    speech.start(resolveRecognitionLang())
   }
 
   return {
     isSupported: speech.isSupported,
     liveTranscript,
     errorMessage,
+    micLanguage,
+    setMicLanguage,
     toggleListening,
+    abortListening,
   }
 }

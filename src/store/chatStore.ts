@@ -64,6 +64,12 @@ export const useChatStore = defineStore('chat', () => {
     persistMessages()
   }
 
+  function clearChat() {
+    messages.value = [createWelcomeMessage()]
+    voiceState.value = 'idle'
+    persistMessages()
+  }
+
   function addUserMessage(text: string) {
     addMessage(createUserTextMessage(text))
   }
@@ -101,5 +107,6 @@ export const useChatStore = defineStore('chat', () => {
     addAssistantTextMessage,
     addAssistantSuccessMessage,
     addAssistantCardMessage,
+    clearChat,
   }
 })

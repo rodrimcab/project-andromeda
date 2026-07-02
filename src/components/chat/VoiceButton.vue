@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { HelpCircle, Keyboard, Mic } from '@lucide/vue'
+import { HelpCircle, Keyboard, Mic, Square } from '@lucide/vue'
 import { computed, ref } from 'vue'
 
 import TextPromptDialog from '@/components/chat/TextPromptDialog.vue'
 import VoiceHelpDialog from '@/components/chat/VoiceHelpDialog.vue'
+import type { MicLanguage } from '@/composables/useMicLanguage'
 import type { VoiceState } from '@/types/chat'
 
 const props = withDefaults(
@@ -13,6 +14,7 @@ const props = withDefaults(
     errorMessage?: string | null
     disabled?: boolean
     canSubmit?: boolean
+    micLanguage?: MicLanguage
   }>(),
   {
     state: 'idle',
@@ -20,12 +22,15 @@ const props = withDefaults(
     errorMessage: null,
     disabled: false,
     canSubmit: true,
+    micLanguage: 'en',
   },
 )
 
 const emit = defineEmits<{
   toggle: []
   submit: [text: string]
+  'cancel-speaking': []
+  'set-mic-language': [language: MicLanguage]
 }>()
 
 const textDialogOpen = ref(false)
@@ -36,16 +41,21 @@ const stateLabel = computed(() => {
     idle: 'Tap to speak',
     listening: 'Listening...',
     thinking: 'Thinking...',
-    speaking: 'Speaking...',
+    speaking: 'Tap to stop',
   }
   return labels[props.state]
 })
 
 const isActive = computed(() => props.state === 'listening' || props.state === 'speaking')
 const isMicDisabled = computed(
-  () => props.disabled || (props.state !== 'idle' && props.state !== 'listening'),
+  () =>
+    props.disabled ||
+    (props.state !== 'idle' && props.state !== 'listening' && props.state !== 'speaking'),
 )
 const isKeyboardDisabled = computed(() => !props.canSubmit || props.state !== 'idle')
+const canChangeMicLanguage = computed(() => props.state === 'idle' && !props.disabled)
+
+const micLanguages: MicLanguage[] = ['en', 'es']
 
 function openTextDialog() {
   if (isKeyboardDisabled.value) {
@@ -58,10 +68,19 @@ function openTextDialog() {
 function handleTextSubmit(text: string) {
   emit('submit', text)
 }
+
+function handleMicClick() {
+  if (props.state === 'speaking') {
+    emit('cancel-speaking')
+    return
+  }
+
+  emit('toggle')
+}
 </script>
 
 <template>
-  <div class="relative flex items-center justify-center gap-6 px-4 py-6">
+  <div class="relative flex items-center justify-center gap-3 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
     <button
       type="button"
       class="glass glass-hover rounded-full p-3 text-gray-400 transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
@@ -73,6 +92,29 @@ function handleTextSubmit(text: string) {
     </button>
 
     <div class="flex flex-col items-center">
+      <div
+        class="mb-3 flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1"
+        role="group"
+        aria-label="Microphone language"
+      >
+        <button
+          v-for="language in micLanguages"
+          :key="language"
+          type="button"
+          class="rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors"
+          :class="
+            micLanguage === language
+              ? 'bg-blue-500/90 text-white'
+              : 'text-gray-400 hover:text-gray-200'
+          "
+          :disabled="!canChangeMicLanguage"
+          :aria-pressed="micLanguage === language"
+          @click="emit('set-mic-language', language)"
+        >
+          {{ language }}
+        </button>
+      </div>
+
       <div class="relative flex h-24 w-36 items-center justify-center">
         <div
           v-if="isActive"
@@ -130,11 +172,12 @@ function handleTextSubmit(text: string) {
               : 'glow-blue hover:scale-105 active:scale-95'
           "
           :disabled="isMicDisabled"
-          :aria-pressed="state === 'listening'"
-          aria-label="Voice input"
-          @click="emit('toggle')"
+          :aria-pressed="state === 'listening' || state === 'speaking'"
+          :aria-label="state === 'speaking' ? 'Stop speaking' : 'Voice input'"
+          @click="handleMicClick"
         >
-          <Mic class="h-7 w-7 text-white" />
+          <Square v-if="state === 'speaking'" class="h-6 w-6 fill-white text-white" />
+          <Mic v-else class="h-7 w-7 text-white" />
         </button>
       </div>
 
