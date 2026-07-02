@@ -25,4 +25,5 @@ export interface SaveMissionToolResult {
   success: boolean
   title: string
   savedAt: string
+  imageUrl?: string
 }

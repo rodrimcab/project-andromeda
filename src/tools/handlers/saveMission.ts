@@ -1,3 +1,4 @@
+import { saveMissionToPipedream } from '@/services/missionService'
 import type { SaveMissionArgs, SaveMissionToolResult } from '@/types/tools'
 
 export async function saveMission(args: SaveMissionArgs): Promise<SaveMissionToolResult> {
@@ -6,14 +7,22 @@ export async function saveMission(args: SaveMissionArgs): Promise<SaveMissionToo
     throw new Error('Mission title is required.')
   }
 
-  // Phase 7: POST mission payload to Pipedream RequestBin.
-  if (import.meta.env.DEV) {
-    console.info('[Andromeda] save_mission stub:', { ...args, title })
-  }
+  const description = args.description?.trim() || undefined
+  const imageUrl = args.imageUrl?.trim() || undefined
+  const savedAt = new Date().toISOString()
+
+  await saveMissionToPipedream({
+    title,
+    description,
+    imageUrl,
+    savedAt,
+    source: 'project-andromeda',
+  })
 
   return {
     success: true,
     title,
-    savedAt: new Date().toISOString(),
+    savedAt,
+    ...(imageUrl && { imageUrl }),
   }
 }

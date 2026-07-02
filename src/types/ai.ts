@@ -14,7 +14,7 @@ export interface AiError {
 
 export type AssistantEffect =
   | { type: 'card'; card: MediaCard }
-  | { type: 'mission_saved'; title: string }
+  | { type: 'mission_saved'; title: string; savedAt: string; imageUrl?: string }
 
 export interface AssistantResponse {
   text: string

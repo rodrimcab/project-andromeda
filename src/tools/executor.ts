@@ -50,7 +50,12 @@ export async function executeToolCall(call: FunctionCall): Promise<ToolExecution
         const result = await saveMission(args)
         return {
           response: { ...result },
-          effect: { type: 'mission_saved', title: result.title },
+          effect: {
+            type: 'mission_saved',
+            title: result.title,
+            savedAt: result.savedAt,
+            ...(result.imageUrl && { imageUrl: result.imageUrl }),
+          },
         }
       }
     }

@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_GEMINI_API_KEY: string
   readonly VITE_GEMINI_MODEL?: string
   readonly VITE_NASA_API_KEY?: string
+  readonly VITE_PIPEDREAM_WEBHOOK_URL?: string
 }
 
 interface ImportMeta {

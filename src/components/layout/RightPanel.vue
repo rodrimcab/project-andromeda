@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Bookmark,
   Earth,
   Image,
   Orbit,
@@ -9,7 +10,10 @@ import {
 
 import MissionCard from '@/components/ui/MissionCard.vue'
 import SuggestionCard from '@/components/ui/SuggestionCard.vue'
-import { recentMissions, suggestions } from '@/data/mockData'
+import { suggestions } from '@/data/mockData'
+import { useMissionStore } from '@/store/missionStore'
+
+const missionStore = useMissionStore()
 
 const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
 </script>
@@ -32,23 +36,42 @@ const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
     <!-- Recent missions -->
     <section class="flex-1">
       <h2 class="mb-4 text-sm font-semibold text-gray-300">Recent Missions</h2>
-      <div class="space-y-2">
-        <MissionCard
-          v-for="mission in recentMissions"
-          :key="mission.id"
-          :title="mission.title"
-          :date="mission.date"
-          :image-url="mission.imageUrl"
-          :saved="mission.saved"
-        />
+
+      <div
+        v-if="missionStore.recentSavedMissions.length === 0"
+        class="glass flex flex-col items-center rounded-xl px-4 py-8 text-center"
+      >
+        <div
+          class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10"
+        >
+          <Bookmark class="h-5 w-5 text-blue-400" />
+        </div>
+        <p class="text-sm font-medium text-gray-300">No missions saved yet</p>
+        <p class="mt-1 max-w-[220px] text-xs leading-relaxed text-gray-500">
+          Ask Andromeda to save a NASA image or discovery — it'll show up here.
+        </p>
       </div>
 
-      <button
-        type="button"
-        class="mt-4 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300"
-      >
-        View all missions →
-      </button>
+      <template v-else>
+        <div class="space-y-2">
+          <MissionCard
+            v-for="mission in missionStore.recentSavedMissions"
+            :key="mission.id"
+            :title="mission.title"
+            :date="mission.date"
+            :image-url="mission.imageUrl"
+            :saved="mission.saved"
+          />
+        </div>
+
+        <button
+          v-if="missionStore.missions.length > 5"
+          type="button"
+          class="mt-4 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300"
+        >
+          View all missions →
+        </button>
+      </template>
     </section>
   </div>
 </template>

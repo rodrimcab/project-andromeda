@@ -4,6 +4,7 @@ import { useVoiceOutput } from '@/composables/useVoiceOutput'
 import { toLlmChatMessages } from '@/models/conversation/conversation'
 import { GeminiServiceError, sendChatMessage } from '@/services/geminiService'
 import { useChatStore } from '@/store/chatStore'
+import { useMissionStore } from '@/store/missionStore'
 import type { AiError, AssistantResponse } from '@/types/ai'
 
 const USER_FACING_ERRORS: Record<string, string> = {
@@ -28,6 +29,7 @@ function toAiError(error: unknown): AiError {
 
 export function useAssistant() {
   const chatStore = useChatStore()
+  const missionStore = useMissionStore()
   const voiceOutput = useVoiceOutput()
   const error = ref<AiError | null>(null)
   const isGenerating = computed(() => chatStore.voiceState === 'thinking')
@@ -49,6 +51,11 @@ export function useAssistant() {
     }
 
     if (savedEffect) {
+      missionStore.addMission({
+        title: savedEffect.title,
+        savedAt: savedEffect.savedAt,
+        ...(savedEffect.imageUrl && { imageUrl: savedEffect.imageUrl }),
+      })
       chatStore.addAssistantSuccessMessage(response.text)
       return
     }
