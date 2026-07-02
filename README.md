@@ -65,9 +65,15 @@ pnpm build
 
 ## Deployment
 
-> https://your-vercel-url.vercel.app
+> project-andromeda-theta.vercel.app
 
 ## Notes
 
-- Chrome is recommended — Web Speech API support is more consistent there than in other browsers.
+- Google Chrome (desktop) is the recommended browser, as Web Speech API support is more consistent than in other browsers.
+- Voice recognition and speech synthesis may be limited on Safari, iOS browsers, or in-app browsers due to Web Speech API restrictions.
 - A Gemini API key is required for the assistant to respond.
+- This project uses the Gemini API free tier. If the daily quota is exceeded, requests may temporarily fail until the quota resets.
+
+## Browser Permissions
+
+Project Andromeda requires microphone access to enable voice interaction. Please allow microphone permissions when prompted by your browser.
