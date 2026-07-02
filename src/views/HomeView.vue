@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import ChatWindow from '@/components/chat/ChatWindow.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import RightPanel from '@/components/layout/RightPanel.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import { initialMessages } from '@/data/mockData'
+import { useChatStore } from '@/store/chatStore'
 
 const sidebarOpen = ref(false)
 const panelOpen = ref(false)
+
+const chatStore = useChatStore()
+
+onMounted(() => {
+  chatStore.initialize(initialMessages)
+})
 </script>
 
 <template>
@@ -25,7 +32,7 @@ const panelOpen = ref(false)
     </template>
 
     <template #chat>
-      <ChatWindow :messages="initialMessages" />
+      <ChatWindow :messages="chatStore.messages" :voice-state="chatStore.voiceState" />
     </template>
 
     <template #panel>

@@ -2,11 +2,12 @@
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import VoiceButton from '@/components/chat/VoiceButton.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
-import type { ChatMessage } from '@/types/chat'
+import type { ChatMessage, VoiceState } from '@/types/chat'
 
 defineProps<{
   messages: ChatMessage[]
   showTyping?: boolean
+  voiceState?: VoiceState
 }>()
 </script>
 
@@ -38,7 +39,7 @@ defineProps<{
 
     <!-- Voice input -->
     <div class="border-t border-white/10">
-      <VoiceButton />
+      <VoiceButton :state="voiceState" />
     </div>
   </div>
 </template>
