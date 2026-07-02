@@ -8,6 +8,13 @@ defineProps<{
   messages: ChatMessage[]
   showTyping?: boolean
   voiceState?: VoiceState
+  interimTranscript?: string
+  voiceError?: string | null
+  voiceDisabled?: boolean
+}>()
+
+const emit = defineEmits<{
+  'voice-toggle': []
 }>()
 </script>
 
@@ -39,7 +46,13 @@ defineProps<{
 
     <!-- Voice input -->
     <div class="border-t border-white/10">
-      <VoiceButton :state="voiceState" />
+      <VoiceButton
+        :state="voiceState"
+        :interim-transcript="interimTranscript"
+        :error-message="voiceError"
+        :disabled="voiceDisabled"
+        @toggle="emit('voice-toggle')"
+      />
     </div>
   </div>
 </template>

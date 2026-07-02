@@ -5,6 +5,7 @@ import ChatWindow from '@/components/chat/ChatWindow.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import RightPanel from '@/components/layout/RightPanel.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
+import { useVoiceInput } from '@/composables/useVoiceInput'
 import { initialMessages } from '@/data/mockData'
 import { useChatStore } from '@/store/chatStore'
 
@@ -12,6 +13,7 @@ const sidebarOpen = ref(false)
 const panelOpen = ref(false)
 
 const chatStore = useChatStore()
+const voiceInput = useVoiceInput()
 
 onMounted(() => {
   chatStore.initialize(initialMessages)
@@ -32,7 +34,14 @@ onMounted(() => {
     </template>
 
     <template #chat>
-      <ChatWindow :messages="chatStore.messages" :voice-state="chatStore.voiceState" />
+      <ChatWindow
+        :messages="chatStore.messages"
+        :voice-state="chatStore.voiceState"
+        :interim-transcript="voiceInput.liveTranscript.value"
+        :voice-error="voiceInput.errorMessage.value"
+        :voice-disabled="!voiceInput.isSupported.value"
+        @voice-toggle="voiceInput.toggleListening()"
+      />
     </template>
 
     <template #panel>
