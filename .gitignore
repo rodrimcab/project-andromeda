@@ -20,6 +20,10 @@ dist/
 dist-ssr/
 coverage/
 
+# Package manager cache
+.pnpm-store/
+.pnpm-store
+
 # Cache
 .eslintcache
 *.tsbuildinfo
