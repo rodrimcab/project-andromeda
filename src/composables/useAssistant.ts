@@ -4,7 +4,7 @@ import { useVoiceOutput } from '@/composables/useVoiceOutput'
 import { toLlmChatMessages } from '@/models/conversation/conversation'
 import { GeminiServiceError, sendChatMessage } from '@/services/geminiService'
 import { useChatStore } from '@/store/chatStore'
-import type { AiError } from '@/types/ai'
+import type { AiError, AssistantResponse } from '@/types/ai'
 
 const USER_FACING_ERRORS: Record<string, string> = {
   missing_api_key:
@@ -36,6 +36,26 @@ export function useAssistant() {
     error.value = null
   }
 
+  function addAssistantResponse(response: AssistantResponse) {
+    const cardEffect = response.effects.find((effect) => effect.type === 'card')
+    const savedEffect = response.effects.find((effect) => effect.type === 'mission_saved')
+
+    if (cardEffect?.card) {
+      chatStore.addAssistantCardMessage({
+        content: response.text,
+        card: cardEffect.card,
+      })
+      return
+    }
+
+    if (savedEffect) {
+      chatStore.addAssistantSuccessMessage(response.text)
+      return
+    }
+
+    chatStore.addAssistantTextMessage(response.text)
+  }
+
   async function generateResponse(): Promise<void> {
     if (isGenerating.value) return
 
@@ -46,8 +66,9 @@ export function useAssistant() {
 
     try {
       const history = toLlmChatMessages(chatStore.messages)
-      responseText = await sendChatMessage(history)
-      chatStore.addAssistantTextMessage(responseText)
+      const response = await sendChatMessage(history)
+      responseText = response.text
+      addAssistantResponse(response)
     } catch (caught) {
       const aiError = toAiError(caught)
       error.value = aiError

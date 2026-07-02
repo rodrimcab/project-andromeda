@@ -1,3 +1,5 @@
+import type { MediaCard } from '@/types/chat'
+
 export type AiErrorCode =
   | 'missing_api_key'
   | 'quota_exceeded'
@@ -8,4 +10,13 @@ export type AiErrorCode =
 export interface AiError {
   code: AiErrorCode
   message: string
+}
+
+export type AssistantEffect =
+  | { type: 'card'; card: MediaCard }
+  | { type: 'mission_saved'; title: string }
+
+export interface AssistantResponse {
+  text: string
+  effects: AssistantEffect[]
 }
