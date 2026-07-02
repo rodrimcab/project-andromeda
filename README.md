@@ -1,48 +1,73 @@
-# project-andromeda
+# Project Andromeda
 
-This template should help get you started developing with Vue 3 in Vite.
+Project Andromeda is a browser-based space exploration assistant. You talk to Andromeda, an AI mission control companion, using voice or text to ask questions about astronomy, NASA missions, and the cosmos.
 
-## Recommended IDE Setup
+The app combines conversational AI with live NASA data. It can fetch the Astronomy Picture of the Day, surface random NASA imagery, and let you save discoveries to a personal mission log. Chat history and saved missions persist in the browser between sessions.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+Built with Vue 3, TypeScript, and Vite on the frontend. Responses are powered by the Gemini API, with NASA and Pipedream integrations for imagery and mission storage.
 
-## Recommended Browser Setup
+## Features
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+- Voice interaction using the browser
+- Gemini AI integration
+- NASA APOD integration
+- Random NASA image discovery
+- Mission saving
+- English and Spanish support
+- Local persistence
+- Responsive interface
 
-## Type Support for `.vue` Imports in TS
+## Tech Stack
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- Vue 3
+- TypeScript
+- Vite
+- Pinia
+- Tailwind CSS
+- Gemini API
+- NASA APOD API
+- Web Speech API
 
-## Customize configuration
+## Running locally
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+1. Clone the repository
 
-## Project Setup
+```bash
+git clone https://github.com/rodrimcab/project-andromeda.git
+cd project-andromeda
+```
 
-```sh
+2. Install dependencies
+
+```bash
 pnpm install
 ```
 
-### Compile and Hot-Reload for Development
+3. Create a `.env` file using `.env.example`
 
-```sh
+Variables:
+
+- `VITE_GEMINI_API_KEY`
+- `VITE_NASA_API_KEY`
+- `VITE_REQUESTBIN_URL`
+
+4. Start the development server
+
+```bash
 pnpm dev
 ```
 
-### Type-Check, Compile and Minify for Production
+5. Build for production
 
-```sh
+```bash
 pnpm build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+## Deployment
 
-```sh
-pnpm lint
-```
+> https://your-vercel-url.vercel.app
+
+## Notes
+
+- Chrome is recommended — Web Speech API support is more consistent there than in other browsers.
+- A Gemini API key is required for the assistant to respond.
