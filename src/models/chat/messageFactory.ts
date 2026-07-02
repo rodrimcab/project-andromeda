@@ -18,6 +18,16 @@ function createMessage(input: Omit<ChatMessage, 'id' | 'timestamp'>): ChatMessag
   }
 }
 
+export function createWelcomeMessage(): ChatMessage {
+  return createMessage({
+    role: 'assistant',
+    type: 'text',
+    isSeed: true,
+    content:
+      "Welcome aboard, Commander! I'm Andromeda, your AI Mission Control assistant. Tap the mic and ask me anything about the cosmos — planets, missions, nebulae, and beyond. 🌌",
+  })
+}
+
 export function createUserTextMessage(text: string): ChatMessage {
   return createMessage({
     role: 'user',

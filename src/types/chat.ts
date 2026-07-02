@@ -17,6 +17,8 @@ export interface ChatMessage {
   type: 'text' | 'card' | 'success'
   content?: string
   card?: MediaCard
+  /** Demo/seed messages shown in UI but excluded from LLM context */
+  isSeed?: boolean
 }
 
 export interface NavItem {

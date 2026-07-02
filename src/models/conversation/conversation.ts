@@ -61,16 +61,40 @@ function partToText(part: ConversationPart): string {
 }
 
 /**
- * Generic LLM-friendly history representation.
- * Gemini integration (and function calling schemas) should be layered on top in later phases.
+ * Prepare chat history for Gemini.
+ * - Excludes seed/demo messages from the UI
+ * - Drops leading assistant turns (Gemini requires user-first history)
+ * - Merges consecutive turns with the same role
  */
 export function toLlmChatMessages(messages: ChatMessage[]): LlmChatMessage[] {
-  return chatMessagesToConversationHistory(messages).map((turn) => {
-    const content = turn.parts.map(partToText).filter(Boolean).join('\n\n')
-    return {
-      role: turn.role === 'user' ? 'user' : 'model',
-      content,
+  const liveMessages = messages.filter((message) => !message.isSeed)
+
+  const raw = chatMessagesToConversationHistory(liveMessages).map((turn) => ({
+    role: turn.role === 'user' ? ('user' as const) : ('model' as const),
+    content: turn.parts.map(partToText).filter(Boolean).join('\n\n'),
+  }))
+
+  return sanitizeGeminiHistory(raw)
+}
+
+function sanitizeGeminiHistory(messages: LlmChatMessage[]): LlmChatMessage[] {
+  let sanitized = messages.filter((message) => message.content.trim())
+
+  while (sanitized[0]?.role === 'model') {
+    sanitized = sanitized.slice(1)
+  }
+
+  const merged: LlmChatMessage[] = []
+
+  for (const message of sanitized) {
+    const last = merged.at(-1)
+    if (last && last.role === message.role) {
+      last.content = `${last.content}\n\n${message.content}`
+      continue
     }
-  })
+    merged.push({ ...message })
+  }
+
+  return merged
 }
 

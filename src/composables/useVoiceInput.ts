@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 
+import { useAssistant } from '@/composables/useAssistant'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 import { useChatStore } from '@/store/chatStore'
 import type { SpeechRecognitionErrorCode } from '@/types/speech'
@@ -19,6 +20,7 @@ const ERROR_MESSAGES: Record<SpeechRecognitionErrorCode, string> = {
 
 export function useVoiceInput() {
   const chatStore = useChatStore()
+  const assistant = useAssistant()
   const errorMessage = ref<string | null>(null)
 
   const speech = useSpeechRecognition({
@@ -48,11 +50,14 @@ export function useVoiceInput() {
   function handleRecognitionEnd() {
     const text = (speech.transcript.value || speech.interimTranscript.value).trim()
 
+    speech.reset()
+
     if (text) {
       chatStore.addUserMessage(text)
+      void assistant.generateResponse()
+      return
     }
 
-    speech.reset()
     chatStore.setVoiceState('idle')
   }
 

@@ -2,11 +2,12 @@
 import { onMounted, ref } from 'vue'
 
 import ChatWindow from '@/components/chat/ChatWindow.vue'
+import TypingIndicator from '@/components/chat/TypingIndicator.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import RightPanel from '@/components/layout/RightPanel.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import { useVoiceInput } from '@/composables/useVoiceInput'
-import { initialMessages } from '@/data/mockData'
+import { createWelcomeMessage } from '@/models/chat/messageFactory'
 import { useChatStore } from '@/store/chatStore'
 
 const sidebarOpen = ref(false)
@@ -16,7 +17,7 @@ const chatStore = useChatStore()
 const voiceInput = useVoiceInput()
 
 onMounted(() => {
-  chatStore.initialize(initialMessages)
+  chatStore.initialize([createWelcomeMessage()])
 })
 </script>
 
@@ -41,7 +42,11 @@ onMounted(() => {
         :voice-error="voiceInput.errorMessage.value"
         :voice-disabled="!voiceInput.isSupported.value"
         @voice-toggle="voiceInput.toggleListening()"
-      />
+      >
+        <template #typing>
+          <TypingIndicator v-if="chatStore.voiceState === 'thinking'" />
+        </template>
+      </ChatWindow>
     </template>
 
     <template #panel>

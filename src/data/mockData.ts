@@ -1,4 +1,4 @@
-import type { ChatMessage, Mission, NavItem, Suggestion } from '@/types/chat'
+import type { Mission, NavItem, Suggestion } from '@/types/chat'
 
 export const navItems: NavItem[] = [
   { id: 'chat', label: 'Chat', active: true },
@@ -40,50 +40,3 @@ export const recentMissions: Mission[] = [
   },
 ]
 
-export const initialMessages: ChatMessage[] = [
-  {
-    id: 'welcome',
-    role: 'assistant',
-    timestamp: '10:41 AM',
-    type: 'text',
-    content:
-      "Welcome aboard, Commander! I'm Andromeda, your AI space assistant. Ask me anything about the cosmos — launches, planets, nebulae, and beyond. 🌌",
-  },
-  {
-    id: 'user-1',
-    role: 'user',
-    timestamp: '10:42 AM',
-    type: 'text',
-    content: 'Show me the Astronomy Picture of the Day',
-  },
-  {
-    id: 'assistant-1',
-    role: 'assistant',
-    timestamp: '10:42 AM',
-    type: 'card',
-    content: "Here's today's NASA Astronomy Picture of the Day:",
-    card: {
-      imageUrl:
-        'https://images-assets.nasa.gov/image/STScI-PRC22-08a/STScI-PRC22-08a~orig.jpg',
-      title: 'The Carina Nebula',
-      description:
-        'A stunning view of the Carina Nebula captured by the James Webb Space Telescope, revealing newborn stars and cosmic dust in unprecedented detail.',
-      linkLabel: 'View on NASA',
-      linkUrl: 'https://apod.nasa.gov/apod/astropix.html',
-    },
-  },
-  {
-    id: 'user-2',
-    role: 'user',
-    timestamp: '10:43 AM',
-    type: 'text',
-    content: 'Save this to my missions',
-  },
-  {
-    id: 'assistant-2',
-    role: 'assistant',
-    timestamp: '10:43 AM',
-    type: 'success',
-    content: 'Mission saved successfully! 🚀',
-  },
-]
