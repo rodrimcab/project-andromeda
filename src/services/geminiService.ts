@@ -8,7 +8,7 @@ import { ANDROMEDA_SYSTEM_PROMPT } from '@/constants/andromedaPrompt'
 import { env } from '@/config/env'
 import type { LlmChatMessage } from '@/models/conversation/conversation'
 import { ANDROMEDA_TOOLS } from '@/tools/definitions'
-import { executeToolCall } from '@/tools/executor'
+import { executeToolCall, type ToolExecutionContext } from '@/tools/executor'
 import type { AiErrorCode, AssistantEffect, AssistantResponse } from '@/types/ai'
 
 const MAX_TOOL_ROUNDS = 5
@@ -65,7 +65,10 @@ function mapGeminiError(error: unknown): never {
   throw new GeminiServiceError(message, 'api_error')
 }
 
-export async function sendChatMessage(messages: LlmChatMessage[]): Promise<AssistantResponse> {
+export async function sendChatMessage(
+  messages: LlmChatMessage[],
+  context: ToolExecutionContext = { messages: [], missions: [] },
+): Promise<AssistantResponse> {
   if (messages.length === 0) {
     throw new GeminiServiceError('No messages to send.', 'api_error')
   }
@@ -102,7 +105,7 @@ export async function sendChatMessage(messages: LlmChatMessage[]): Promise<Assis
       const functionResponseParts: Part[] = []
 
       for (const functionCall of functionCalls) {
-        const outcome = await executeToolCall(functionCall)
+        const outcome = await executeToolCall(functionCall, context)
 
         if (outcome.effect) {
           effects.push(outcome.effect)

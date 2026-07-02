@@ -1,8 +1,5 @@
 import type { NasaApodResponse } from '@/types/nasa'
 
-const VIDEO_FALLBACK_IMAGE =
-  'https://images-assets.nasa.gov/image/PIA04213/PIA04213~thumb.jpg'
-
 export function buildApodPageUrl(date: string): string {
   const [year, month, day] = date.split('-')
   if (!year || !month || !day) {
@@ -20,7 +17,7 @@ export function getYouTubeThumbnail(videoUrl: string): string | null {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
 }
 
-export function resolveApodImageUrl(apod: NasaApodResponse): string {
+export function resolveApodImageUrl(apod: NasaApodResponse): string | null {
   if (apod.media_type === 'image') {
     return apod.hdurl ?? apod.url
   }
@@ -29,12 +26,7 @@ export function resolveApodImageUrl(apod: NasaApodResponse): string {
     return apod.thumbnail_url
   }
 
-  const youtubeThumb = getYouTubeThumbnail(apod.url)
-  if (youtubeThumb) {
-    return youtubeThumb
-  }
-
-  return VIDEO_FALLBACK_IMAGE
+  return getYouTubeThumbnail(apod.url)
 }
 
 export function truncateForCard(text: string, maxLength = 280): string {

@@ -1,12 +1,24 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Bot } from '@lucide/vue'
 
 import MediaCard from '@/components/ui/MediaCard.vue'
-import type { ChatMessage } from '@/types/chat'
+import { useMissionSave } from '@/composables/useMissionSave'
+import type { ChatMessage, MediaCard as MediaCardType } from '@/types/chat'
 
-defineProps<{
+const props = defineProps<{
   message: ChatMessage
 }>()
+
+const emit = defineEmits<{
+  'save-card': [card: MediaCardType]
+}>()
+
+const missionSave = useMissionSave()
+
+const isCardSaved = computed(() =>
+  props.message.card ? missionSave.isCardSaved(props.message.card) : false,
+)
 </script>
 
 <template>
@@ -46,7 +58,13 @@ defineProps<{
         <div class="glass rounded-2xl rounded-tl-md px-4 py-3 text-sm text-gray-300">
           {{ message.content }}
         </div>
-        <MediaCard v-if="message.card" :card="message.card" />
+        <MediaCard
+          v-if="message.card"
+          :card="message.card"
+          saveable
+          :already-saved="isCardSaved"
+          @save="emit('save-card', message.card)"
+        />
       </div>
 
       <p class="mt-1 text-xs text-gray-600">{{ message.timestamp }}</p>

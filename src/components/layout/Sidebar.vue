@@ -5,13 +5,32 @@ import earthImg from '@/assets/earth.png'
 import galaxyImg from '@/assets/galaxy.png'
 import SidebarItem from '@/components/ui/SidebarItem.vue'
 import { navItems } from '@/data/mockData'
+import { useAppStore, type AppView } from '@/store/appStore'
 
 defineOptions({ name: 'AppSidebar' })
+
+const emit = defineEmits<{
+  navigate: [view: AppView]
+}>()
+
+const appStore = useAppStore()
 
 const iconMap = {
   chat: MessageCircle,
   missions: Bookmark,
 } as const
+
+function isActive(id: string): boolean {
+  return id === 'missions'
+    ? appStore.activeView === 'missions'
+    : appStore.activeView === 'chat'
+}
+
+function handleNavigate(id: string) {
+  const view: AppView = id === 'missions' ? 'missions' : 'chat'
+  appStore.setActiveView(view)
+  emit('navigate', view)
+}
 </script>
 
 <template>
@@ -39,7 +58,8 @@ const iconMap = {
         :key="item.id"
         :label="item.label"
         :icon="iconMap[item.id as keyof typeof iconMap]"
-        :active="item.active"
+        :active="isActive(item.id)"
+        @click="handleNavigate(item.id)"
       />
     </nav>
 

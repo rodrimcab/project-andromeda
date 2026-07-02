@@ -6,6 +6,10 @@ defineProps<{
   icon: Component
   active?: boolean
 }>()
+
+defineEmits<{
+  click: []
+}>()
 </script>
 
 <template>
@@ -17,6 +21,7 @@ defineProps<{
         ? 'border-l-2 border-blue-500 bg-blue-500/15 text-blue-300'
         : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
     "
+    @click="$emit('click')"
   >
     <component
       :is="icon"

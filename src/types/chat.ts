@@ -3,13 +3,14 @@ export type MessageRole = 'user' | 'assistant'
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking'
 
 export interface MediaCard {
-  imageUrl: string
+  imageUrl?: string
   title: string
   description: string
   linkLabel: string
   linkUrl: string
   mediaType?: 'image' | 'video'
   videoUrl?: string
+  videoUnavailable?: boolean
 }
 
 export interface ChatMessage {
@@ -37,7 +38,9 @@ export interface Suggestion {
 export interface Mission {
   id: string
   title: string
-  date: string
-  imageUrl: string
+  savedAt: string
+  imageUrl?: string
+  description?: string
+  sourceUrl?: string
   saved?: boolean
 }

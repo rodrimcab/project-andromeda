@@ -20,10 +20,17 @@ export interface LlmChatMessage {
 function formatCardAsText(card: MediaCard): string {
   const desc = card.description ? `\nDescription: ${card.description}` : ''
   const link = card.linkUrl ? `\nLink: ${card.linkLabel} (${card.linkUrl})` : ''
-  const media =
-    card.mediaType === 'video'
-      ? `\nMedia: video${card.videoUrl ? ` (${card.videoUrl})` : ''}`
-      : `\nImage: ${card.imageUrl}`
+
+  let media = ''
+  if (card.mediaType === 'video') {
+    media = `\nMedia: video${card.videoUrl ? ` (${card.videoUrl})` : ''}`
+    if (card.videoUnavailable) {
+      media += ' — preview unavailable on card'
+    }
+  } else if (card.imageUrl) {
+    media = `\nImage: ${card.imageUrl}`
+  }
+
   return `Card: ${card.title}${desc}${link}${media}`
 }
 

@@ -1,22 +1,50 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import type { ChatMessage, VoiceState } from '@/types/chat'
+import { createWelcomeMessage } from '@/models/chat/messageFactory'
 import {
   createAssistantCardMessage,
   createAssistantSuccessMessage,
   createAssistantTextMessage,
   createUserTextMessage,
 } from '@/models/chat/messageFactory'
+import { loadChatMessages, saveChatMessages } from '@/services/persistenceService'
+import type { ChatMessage, VoiceState } from '@/types/chat'
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
   const voiceState = ref<VoiceState>('idle')
   const initialized = ref(false)
 
-  function initialize(initialMessages: ChatMessage[]) {
-    if (initialized.value) return
-    messages.value = initialMessages
+  function persistMessages() {
+    if (!initialized.value) {
+      return
+    }
+
+    saveChatMessages(messages.value)
+  }
+
+  function hydrate() {
+    if (initialized.value) {
+      return
+    }
+
+    const persisted = loadChatMessages()
+    messages.value = persisted?.length ? persisted : [createWelcomeMessage()]
+    initialized.value = true
+  }
+
+  function initialize(initialMessages?: ChatMessage[]) {
+    if (initialized.value) {
+      return
+    }
+
+    if (initialMessages?.length) {
+      messages.value = initialMessages
+    } else {
+      hydrate()
+    }
+
     initialized.value = true
   }
 
@@ -26,12 +54,14 @@ export const useChatStore = defineStore('chat', () => {
 
   function addMessage(message: ChatMessage) {
     messages.value = [...messages.value, message]
+    persistMessages()
   }
 
   function reset(initialMessages: ChatMessage[]) {
     messages.value = initialMessages
     voiceState.value = 'idle'
     initialized.value = true
+    persistMessages()
   }
 
   function addUserMessage(text: string) {
@@ -47,14 +77,22 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function addAssistantCardMessage(input: { content?: string; card: ChatMessage['card'] }) {
-    // Note: `ChatMessage['card']` is `MediaCard | undefined`; we enforce it here at runtime.
     if (!input.card) throw new Error('Assistant card message requires a card.')
     addMessage(createAssistantCardMessage({ content: input.content, card: input.card }))
   }
 
+  watch(
+    messages,
+    () => {
+      persistMessages()
+    },
+    { deep: true },
+  )
+
   return {
     messages,
     voiceState,
+    hydrate,
     initialize,
     reset,
     setVoiceState,
@@ -65,4 +103,3 @@ export const useChatStore = defineStore('chat', () => {
     addAssistantCardMessage,
   }
 })
-

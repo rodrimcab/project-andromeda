@@ -1,11 +1,14 @@
 import { computed, ref } from 'vue'
 
+import { useMissionSave } from '@/composables/useMissionSave'
 import { useVoiceOutput } from '@/composables/useVoiceOutput'
 import { toLlmChatMessages } from '@/models/conversation/conversation'
 import { GeminiServiceError, sendChatMessage } from '@/services/geminiService'
 import { useChatStore } from '@/store/chatStore'
 import { useMissionStore } from '@/store/missionStore'
 import type { AiError, AssistantResponse } from '@/types/ai'
+import type { ChatMessage } from '@/types/chat'
+import { detectSaveIntent } from '@/utils/saveIntent'
 
 const USER_FACING_ERRORS: Record<string, string> = {
   missing_api_key:
@@ -27,9 +30,25 @@ function toAiError(error: unknown): AiError {
   return { code: 'unknown', message }
 }
 
+function getLastUserMessage(messages: ChatMessage[]): string {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message?.role === 'user' && message.content?.trim()) {
+      return message.content.trim()
+    }
+  }
+
+  return ''
+}
+
+function hasMissionSavedEffect(response: AssistantResponse): boolean {
+  return response.effects.some((effect) => effect.type === 'mission_saved')
+}
+
 export function useAssistant() {
   const chatStore = useChatStore()
   const missionStore = useMissionStore()
+  const missionSave = useMissionSave()
   const voiceOutput = useVoiceOutput()
   const error = ref<AiError | null>(null)
   const isGenerating = computed(() => chatStore.voiceState === 'thinking')
@@ -51,12 +70,28 @@ export function useAssistant() {
     }
 
     if (savedEffect) {
+      if (savedEffect.duplicate) {
+        chatStore.addAssistantSuccessMessage(
+          `"${savedEffect.title}" is already in your mission log.`,
+        )
+        return
+      }
+
       missionStore.addMission({
         title: savedEffect.title,
         savedAt: savedEffect.savedAt,
+        ...(savedEffect.description && { description: savedEffect.description }),
         ...(savedEffect.imageUrl && { imageUrl: savedEffect.imageUrl }),
+        ...(savedEffect.sourceUrl && { sourceUrl: savedEffect.sourceUrl }),
       })
-      chatStore.addAssistantSuccessMessage(response.text)
+
+      const successText = savedEffect.remoteSaved
+        ? response.text
+        : savedEffect.warning
+          ? `${response.text} (${savedEffect.warning})`
+          : `${response.text} (Saved locally — cloud sync unavailable.)`
+
+      chatStore.addAssistantSuccessMessage(successText)
       return
     }
 
@@ -68,12 +103,30 @@ export function useAssistant() {
 
     clearError()
     chatStore.setVoiceState('thinking')
+    missionStore.hydrate()
+
+    const lastUserMessage = getLastUserMessage(chatStore.messages)
+    const saveIntent = detectSaveIntent(lastUserMessage)
 
     let responseText = ''
 
     try {
       const history = toLlmChatMessages(chatStore.messages)
-      const response = await sendChatMessage(history)
+      const response = await sendChatMessage(history, {
+        messages: chatStore.messages,
+        missions: missionStore.missions,
+      })
+
+      if (saveIntent && !hasMissionSavedEffect(response)) {
+        const fallback = await missionSave.saveLastDiscovery()
+        if (fallback.handled) {
+          chatStore.addAssistantSuccessMessage(fallback.message)
+          responseText = fallback.message
+          await voiceOutput.speak(responseText)
+          return
+        }
+      }
+
       responseText = response.text
       addAssistantResponse(response)
     } catch (caught) {

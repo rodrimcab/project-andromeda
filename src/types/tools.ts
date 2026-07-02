@@ -1,11 +1,14 @@
-export type AndromedaToolName = 'get_nasa_apod' | 'save_mission'
+export type AndromedaToolName =
+  | 'get_today_astronomy_picture'
+  | 'get_random_astronomy_picture'
+  | 'save_mission'
 
-export interface GetNasaApodArgs {
+export interface GetTodayAstronomyPictureArgs {
   date?: string
 }
 
 export interface SaveMissionArgs {
-  title: string
+  title?: string
   description?: string
   imageUrl?: string
 }
@@ -13,12 +16,14 @@ export interface SaveMissionArgs {
 export interface ApodToolResult {
   title: string
   explanation: string
-  imageUrl: string
   date: string
   mediaType: 'image' | 'video'
+  imageUrl?: string
   hdImageUrl?: string
   sourceUrl?: string
   copyright?: string
+  videoUrl?: string
+  videoUnavailable?: boolean
 }
 
 export interface SaveMissionToolResult {
@@ -26,4 +31,9 @@ export interface SaveMissionToolResult {
   title: string
   savedAt: string
   imageUrl?: string
+  description?: string
+  sourceUrl?: string
+  remoteSaved: boolean
+  duplicate?: boolean
+  warning?: string
 }

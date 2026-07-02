@@ -10,12 +10,27 @@ import {
 
 import MissionCard from '@/components/ui/MissionCard.vue'
 import SuggestionCard from '@/components/ui/SuggestionCard.vue'
+import { useChatSubmit } from '@/composables/useChatSubmit'
 import { suggestions } from '@/data/mockData'
-import { useMissionStore } from '@/store/missionStore'
+import { useAppStore } from '@/store/appStore'
+import { MISSION_LOG_PREVIEW_LIMIT, useMissionStore } from '@/store/missionStore'
 
+const appStore = useAppStore()
 const missionStore = useMissionStore()
+const { canSubmit, submitMessage } = useChatSubmit()
+
+missionStore.hydrate()
 
 const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
+
+function openMissionArchive() {
+  appStore.setActiveView('missions')
+}
+
+async function handleSuggestion(label: string) {
+  appStore.setActiveView('chat')
+  await submitMessage(label)
+}
 </script>
 
 <template>
@@ -29,13 +44,15 @@ const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
           :key="suggestion.id"
           :label="suggestion.label"
           :icon="suggestionIcons[index] ?? Rocket"
+          :disabled="!canSubmit"
+          @select="handleSuggestion(suggestion.label)"
         />
       </div>
     </section>
 
     <!-- Recent missions -->
     <section class="flex-1">
-      <h2 class="mb-4 text-sm font-semibold text-gray-300">Recent Missions</h2>
+      <h2 class="mb-4 text-sm font-semibold text-gray-300">Mission Log</h2>
 
       <div
         v-if="missionStore.recentSavedMissions.length === 0"
@@ -58,16 +75,17 @@ const suggestionIcons = [Rocket, Telescope, Image, Orbit, Earth]
             v-for="mission in missionStore.recentSavedMissions"
             :key="mission.id"
             :title="mission.title"
-            :date="mission.date"
+            :saved-at="mission.savedAt"
             :image-url="mission.imageUrl"
             :saved="mission.saved"
           />
         </div>
 
         <button
-          v-if="missionStore.missions.length > 5"
+          v-if="missionStore.missions.length > MISSION_LOG_PREVIEW_LIMIT"
           type="button"
           class="mt-4 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300"
+          @click="openMissionArchive"
         >
           View all missions →
         </button>

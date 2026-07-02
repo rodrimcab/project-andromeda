@@ -48,7 +48,7 @@ function parseApiErrorDetail(body: unknown): string {
   return ''
 }
 
-export async function fetchNasaApod(date?: string): Promise<NasaApodResponse> {
+function getApiKey(): string {
   const apiKey = env.nasaApiKey?.trim()
   if (!apiKey) {
     throw new NasaApodError(
@@ -57,12 +57,67 @@ export async function fetchNasaApod(date?: string): Promise<NasaApodResponse> {
     )
   }
 
+  return apiKey
+}
+
+function validateApodResponse(data: NasaApodResponse): NasaApodResponse {
+  if (!data.title || !data.explanation || !data.url || !data.media_type) {
+    throw new NasaApodError('NASA returned an incomplete APOD response.', 'API')
+  }
+
+  return data
+}
+
+async function requestApod(params: URLSearchParams): Promise<NasaApodResponse> {
+  let response: Response
+  try {
+    response = await fetch(`${APOD_API_URL}?${params}`)
+  } catch {
+    throw new NasaApodError(
+      'Unable to reach the NASA APOD service. Check your network connection.',
+      'NETWORK',
+    )
+  }
+
+  if (response.status === 429) {
+    throw new NasaApodError('NASA API rate limit exceeded. Try again in a few minutes.', 'RATE_LIMIT')
+  }
+
+  if (response.status === 404) {
+    throw new NasaApodError('No APOD found for the requested date.', 'NOT_FOUND')
+  }
+
+  if (!response.ok) {
+    let detail = ''
+    try {
+      detail = parseApiErrorDetail(await response.json())
+    } catch {
+      // Response body is not JSON — use status only.
+    }
+
+    throw new NasaApodError(`NASA APOD request failed (${response.status}).${detail}`, 'API')
+  }
+
+  return validateApodResponse((await response.json()) as NasaApodResponse)
+}
+
+export async function fetchNasaApodToday(date?: string): Promise<NasaApodResponse> {
   const queryDate = date ?? new Date().toISOString().slice(0, 10)
   validateApodDate(queryDate)
 
   const params = new URLSearchParams({
-    api_key: apiKey,
+    api_key: getApiKey(),
     date: queryDate,
+    thumbs: 'true',
+  })
+
+  return requestApod(params)
+}
+
+export async function fetchRandomNasaApod(): Promise<NasaApodResponse> {
+  const params = new URLSearchParams({
+    api_key: getApiKey(),
+    count: '1',
     thumbs: 'true',
   })
 
@@ -80,10 +135,6 @@ export async function fetchNasaApod(date?: string): Promise<NasaApodResponse> {
     throw new NasaApodError('NASA API rate limit exceeded. Try again in a few minutes.', 'RATE_LIMIT')
   }
 
-  if (response.status === 404) {
-    throw new NasaApodError(`No APOD found for ${queryDate}.`, 'NOT_FOUND')
-  }
-
   if (!response.ok) {
     let detail = ''
     try {
@@ -95,11 +146,17 @@ export async function fetchNasaApod(date?: string): Promise<NasaApodResponse> {
     throw new NasaApodError(`NASA APOD request failed (${response.status}).${detail}`, 'API')
   }
 
-  const data = (await response.json()) as NasaApodResponse
+  const data = (await response.json()) as NasaApodResponse | NasaApodResponse[]
+  const apod = Array.isArray(data) ? data[0] : data
 
-  if (!data.title || !data.explanation || !data.url || !data.media_type) {
-    throw new NasaApodError('NASA returned an incomplete APOD response.', 'API')
+  if (!apod) {
+    throw new NasaApodError('NASA returned an empty random APOD response.', 'API')
   }
 
-  return data
+  return validateApodResponse(apod)
+}
+
+/** @deprecated Use fetchNasaApodToday instead. */
+export async function fetchNasaApod(date?: string): Promise<NasaApodResponse> {
+  return fetchNasaApodToday(date)
 }

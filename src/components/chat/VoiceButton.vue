@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { HelpCircle, Keyboard, Mic } from '@lucide/vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
+import TextPromptDialog from '@/components/chat/TextPromptDialog.vue'
+import VoiceHelpDialog from '@/components/chat/VoiceHelpDialog.vue'
 import type { VoiceState } from '@/types/chat'
 
 const props = withDefaults(
@@ -10,18 +12,24 @@ const props = withDefaults(
     interimTranscript?: string
     errorMessage?: string | null
     disabled?: boolean
+    canSubmit?: boolean
   }>(),
   {
     state: 'idle',
     interimTranscript: '',
     errorMessage: null,
     disabled: false,
+    canSubmit: true,
   },
 )
 
 const emit = defineEmits<{
   toggle: []
+  submit: [text: string]
 }>()
+
+const textDialogOpen = ref(false)
+const helpDialogOpen = ref(false)
 
 const stateLabel = computed(() => {
   const labels: Record<VoiceState, string> = {
@@ -37,22 +45,35 @@ const isActive = computed(() => props.state === 'listening' || props.state === '
 const isMicDisabled = computed(
   () => props.disabled || (props.state !== 'idle' && props.state !== 'listening'),
 )
+const isKeyboardDisabled = computed(() => !props.canSubmit || props.state !== 'idle')
+
+function openTextDialog() {
+  if (isKeyboardDisabled.value) {
+    return
+  }
+
+  textDialogOpen.value = true
+}
+
+function handleTextSubmit(text: string) {
+  emit('submit', text)
+}
 </script>
 
 <template>
   <div class="relative flex items-center justify-center gap-6 px-4 py-6">
     <button
       type="button"
-      class="glass glass-hover rounded-full p-3 text-gray-400"
-      aria-label="Keyboard input"
+      class="glass glass-hover rounded-full p-3 text-gray-400 transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+      :disabled="isKeyboardDisabled"
+      aria-label="Type a message"
+      @click="openTextDialog"
     >
       <Keyboard class="h-5 w-5" />
     </button>
 
     <div class="flex flex-col items-center">
-      <!-- Fixed-size stage: animations never overlap the clickable button -->
       <div class="relative flex h-24 w-36 items-center justify-center">
-        <!-- Waveform wings (left) -->
         <div
           v-if="isActive"
           class="pointer-events-none absolute left-0 flex h-12 items-center gap-0.5"
@@ -69,7 +90,6 @@ const isMicDisabled = computed(
           />
         </div>
 
-        <!-- Waveform wings (right) -->
         <div
           v-if="isActive"
           class="pointer-events-none absolute right-0 flex h-12 items-center gap-0.5"
@@ -86,7 +106,6 @@ const isMicDisabled = computed(
           />
         </div>
 
-        <!-- Pulse rings (behind button only) -->
         <div
           class="pointer-events-none absolute flex h-20 w-20 items-center justify-center"
           aria-hidden="true"
@@ -102,7 +121,6 @@ const isMicDisabled = computed(
           />
         </div>
 
-        <!-- Mic button (always on top) -->
         <button
           type="button"
           class="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
@@ -141,8 +159,17 @@ const isMicDisabled = computed(
       type="button"
       class="glass glass-hover rounded-full p-3 text-gray-400"
       aria-label="Help"
+      @click="helpDialogOpen = true"
     >
       <HelpCircle class="h-5 w-5" />
     </button>
+
+    <TextPromptDialog
+      :open="textDialogOpen"
+      @close="textDialogOpen = false"
+      @submit="handleTextSubmit"
+    />
+
+    <VoiceHelpDialog :open="helpDialogOpen" @close="helpDialogOpen = false" />
   </div>
 </template>
