@@ -13,3 +13,10 @@ export interface SpeechRecognitionResult {
   transcript: string
   isFinal: boolean
 }
+
+export type SpeechSynthesisErrorCode =
+  | 'not-supported'
+  | 'synthesis-failed'
+  | 'canceled'
+  | 'interrupted'
+  | 'unknown'

@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 
+import { useVoiceOutput } from '@/composables/useVoiceOutput'
 import { toLlmChatMessages } from '@/models/conversation/conversation'
 import { GeminiServiceError, sendChatMessage } from '@/services/geminiService'
 import { useChatStore } from '@/store/chatStore'
@@ -27,6 +28,7 @@ function toAiError(error: unknown): AiError {
 
 export function useAssistant() {
   const chatStore = useChatStore()
+  const voiceOutput = useVoiceOutput()
   const error = ref<AiError | null>(null)
   const isGenerating = computed(() => chatStore.voiceState === 'thinking')
 
@@ -40,9 +42,11 @@ export function useAssistant() {
     clearError()
     chatStore.setVoiceState('thinking')
 
+    let responseText = ''
+
     try {
       const history = toLlmChatMessages(chatStore.messages)
-      const responseText = await sendChatMessage(history)
+      responseText = await sendChatMessage(history)
       chatStore.addAssistantTextMessage(responseText)
     } catch (caught) {
       const aiError = toAiError(caught)
@@ -52,12 +56,12 @@ export function useAssistant() {
         console.error('[Andromeda] Gemini request failed:', aiError.message)
       }
 
-      const userMessage =
+      responseText =
         USER_FACING_ERRORS[aiError.code] ?? USER_FACING_ERRORS.unknown ?? 'Something went wrong.'
-      chatStore.addAssistantTextMessage(userMessage)
-    } finally {
-      chatStore.setVoiceState('idle')
+      chatStore.addAssistantTextMessage(responseText)
     }
+
+    await voiceOutput.speak(responseText)
   }
 
   return {
