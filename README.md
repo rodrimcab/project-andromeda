@@ -65,7 +65,7 @@ pnpm build
 
 ## Deployment
 
-> project-andromeda-theta.vercel.app
+> https://project-andromeda-theta.vercel.app/
 
 ## Notes
 
