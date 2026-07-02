@@ -13,7 +13,7 @@ import { detectTextLanguage, getSpeechSynthesisLangForText } from '@/utils/detec
 
 const USER_FACING_ERRORS: Record<string, string> = {
   missing_api_key:
-    'Mission Control is offline — the Gemini API key is not configured. Add VITE_GEMINI_API_KEY to your .env file and restart the dev server.',
+    'Mission Control is offline — the Gemini API key is not configured. Add VITE_GEMINI_API_KEY (and optionally VITE_GEMINI_API_KEY_2) to your .env file and restart the dev server.',
   api_error:
     'I lost contact with Mission Control. Please check your connection and try again.',
   empty_response: 'I received an empty signal from Mission Control. Please try again.',
